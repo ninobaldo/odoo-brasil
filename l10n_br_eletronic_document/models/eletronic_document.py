@@ -21,6 +21,7 @@ _logger = logging.getLogger(__name__)
 
 
 STATE = {'draft': [('readonly', False)]}
+CIDADES_GINFES = ['3548708',]
 
 
 class EletronicDocument(models.Model):
@@ -837,6 +838,9 @@ class EletronicDocument(models.Model):
                 doc['valor_ir'] = self.irrf_valor_retencao
                 doc['valor_csll'] = self.csll_valor_retencao
             response = send_api(certificate, password, doc_values)
+        elif doc_values[0]['emissor']['codigo_municipio'] in CIDADES_GINFES:
+            from .nfse_ginfes import send_api
+            response = send_api(certificate, password, doc_values)
         else:
             from .focus_nfse import send_api
             response = send_api(
@@ -939,6 +943,10 @@ class EletronicDocument(models.Model):
             doc_values['inscricao_municipal'] = re.sub('\W+','', company.l10n_br_inscr_mun)
             doc_values['numero'] = str(self.data_emissao.year) + '{:>011d}'.format(self.numero)
             response = cancel_api(certificate, password, doc_values)
+        elif doc_values['codigo_municipio'] in CIDADES_GINFES:
+            from .nfse_ginfes import cancel_api
+            response = cancel_api(certificate, password, doc_values)
+
         else:
             from .focus_nfse import cancel_api
             response = cancel_api(
