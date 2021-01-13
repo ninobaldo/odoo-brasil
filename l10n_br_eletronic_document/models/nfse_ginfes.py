@@ -1,6 +1,6 @@
 import re
 import base64
-from pytrustnfe.nfse.ginfes import recepcionar_lote_rps, cancelar_nfse
+from pytrustnfe.nfse.ginfes import recepcionar_lote_rps, consultar_situacao_lote,  cancelar_nfse, consultar_lote_rps
 from pytrustnfe.certificado import Certificado
 
 import logging
@@ -28,7 +28,8 @@ def _convert_values(vals):
         rps['iss_retido'] = 1 if rps['iss_retido'] else 2
 
         # TODO: pegar de algum lugar
-        # rps['codigo_tributacao_municipio'] = '1.07/1.07/620910000'
+        # Código de Tributação no Município
+        rps['codigo_tributacao_municipio'] = rps['itens_servico'][0]['codigo_servico_municipio']
         rps['valor_iss_retido'] = rps['iss_valor_retencao']
         rps['valor_deducao'] = 0
         rps['valor_pis'] = 0
@@ -53,8 +54,7 @@ def _convert_values(vals):
             - rps['desconto_incondicionado'] \
             - rps['desconto_condicionado']
 
-        # TODO: validar onde é definido isso
-        rps['codigo_servico'] = rps['itens_servico'][0]['codigo_servico_municipio']
+        rps['codigo_servico'] = rps['itens_servico'][0]['codigo_servico']
 
         if rps['itens_servico'][0]['cnae_servico']:
             rps['cnae_servico'] = rps['itens_servico'][0]['cnae_servico']
@@ -73,8 +73,9 @@ def _convert_values(vals):
         rps['tomador']['cidade'] = rps['tomador']['endereco']['codigo_municipio']
         rps['tomador']['uf'] = rps['tomador']['endereco']['uf']
         rps['tomador']['cep'] = rps['tomador']['endereco']['cep']
-        if rps['tomador']['telefone'] and len(rps['tomador']['telefone']) > 11:
-            rps['tomador']['telefone'] = rps['tomador']['telefone'][2:]
+        rps['tomador']['telefone'] = ''
+
+        rps['valor_servico'] = "%.2f" % rps['valor_servico']
 
 
         # TODO: pegar da configuração, pois estão todos fixos
@@ -111,10 +112,20 @@ def _convert_values(vals):
         # 5 - Microempresário Individual (MEI)
         # 6 - Microempresário e Empresa de Pequeno Porte
         # (ME EPP)        
-        rps['regime_tributacao'] = '' 
+        rps['regime_tributacao'] = 6 
         
         rps['incentivador_cultural'] = 2 
         rps['status'] = 1
+
+        rps['valor_deducao'] = ''
+        rps['valor_pis'] = ''
+        rps['valor_cofins'] = ''
+        rps['valor_inss'] = ''
+        rps['valor_ir'] = ''
+        rps['valor_csll'] = ''
+        rps['outras_retencoes'] = ''
+        rps['desconto_incondicionado'] = ''
+        rps['desconto_condicionado'] = ''
 
         # TODO: Validar construcao_civil e intermediario na NFS
 
@@ -137,7 +148,7 @@ def send_api(certificate, password, edocs):
     if hasattr(retorno, 'NumeroLote'):
         if edocs[0]['ambiente'] == 'producao':
             return {
-                'code': 201,
+                'code': 'processing',
                 'entity': {
                     'numero_nfe': retorno.NumeroLote,
                     'protocolo_nfe': retorno.Protocolo,
@@ -146,9 +157,9 @@ def send_api(certificate, password, edocs):
             }
         else:
             return {
-                'code': 201,
+                'code': 'processing',
                 'entity': {
-                    'protocolo_nfe':  "homologacao: {}".format(retorno.Protocolo),
+                    'protocolo_nfe':  retorno.Protocolo,
                     'numero_nfe': retorno.NumeroLote,
                 },
                 'xml': resposta['sent_xml'].encode('utf-8'),
@@ -220,3 +231,82 @@ def cancel_api(certificate, password, vals):
                 },
                 'xml': resposta['sent_xml'].encode('utf-8'),
             }
+
+def check_nfse_api(certificate, password, edocs):
+    _logger.info('check_nfse_api')
+    _logger.info(edocs)
+   
+    cert_pfx = base64.decodestring(certificate)
+    certificado = Certificado(cert_pfx, password)
+
+    return _consultar_situacao_lote(certificado, consulta=edocs, ambiente=edocs['ambiente'])
+    
+
+def _consultar_situacao_lote(certificado, **kwargs):
+    _logger.info('_consultar_situacao_lote')
+    resposta = consultar_situacao_lote(certificado, **kwargs)
+    retorno = resposta['object']
+
+    _logger.info('_consultar_situacao_lote.resultado')
+    _logger.info(resposta)
+
+    if hasattr(retorno, 'ListaMensagemRetorno'):
+        return {
+            'code': 400,
+            'final': False,
+            'api_code': retorno.ListaMensagemRetorno.MensagemRetorno.Codigo,
+            'message': retorno.ListaMensagemRetorno.MensagemRetorno.Mensagem + ' ' + retorno.ListaMensagemRetorno.MensagemRetorno.Correcao,
+        }
+    else:
+        # Código de situação de lote de RPS
+        # 1 – Não Recebido
+        # 2 – Não Processado
+        # 3 – Processado com Erro
+        # 4 – Processado com Sucesso
+        if retorno.Situacao == 1:
+            return {
+                'code': 400,
+                'final': False,
+                'api_code': retorno.Situacao,
+                'message': 'Não Recebido',
+            }
+        elif retorno.Situacao == 2:
+            return {
+                'code': 400,
+                'final': False,
+                'api_code': retorno.Situacao,
+                'message': 'Não Processado',
+            }
+        else:
+            return _consultar_lote_rps(certificado, **kwargs)
+            # return {
+            #     'code': 400,
+            #     'final': False,
+            #     'api_code': '666',
+            #     'message': 'Erro não identificado',
+            #     'final': False
+            # }
+
+
+def _consultar_lote_rps(certificado, **kwargs):
+    _logger.info('_consultar_lote_rps')
+    resposta = consultar_lote_rps(certificado, **kwargs)
+    retorno = resposta['object']
+
+    _logger.info('_consultar_lote_rps.resultado')
+    _logger.info(resposta)
+
+    if hasattr(retorno, 'ListaMensagemRetorno'):
+        return {
+            'code': 400,
+            'final': True,
+            'api_code': retorno.ListaMensagemRetorno.MensagemRetorno.Codigo,
+            'message': retorno.ListaMensagemRetorno.MensagemRetorno.Mensagem + ' ' + retorno.ListaMensagemRetorno.MensagemRetorno.Correcao,
+        }
+    else:
+        return {
+            'code': 400,
+            'final': False,
+            'api_code': '666',
+            'message': 'Erro não identificado',
+        }

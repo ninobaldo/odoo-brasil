@@ -812,6 +812,9 @@ class EletronicDocument(models.Model):
             'schedule_user_id': self.env.user.id,
         })
 
+    def _uses_ginfes(self, codigo_municipio):
+        return codigo_municipio in CIDADES_GINFES
+
     def action_send_eletronic_invoice(self):
         self._update_document_values()
         company = self.mapped('company_id').with_context({'bin_size': False})
@@ -838,7 +841,7 @@ class EletronicDocument(models.Model):
                 doc['valor_ir'] = self.irrf_valor_retencao
                 doc['valor_csll'] = self.csll_valor_retencao
             response = send_api(certificate, password, doc_values)
-        elif doc_values[0]['emissor']['codigo_municipio'] in CIDADES_GINFES:
+        elif self._uses_ginfes(cod_municipio):
             from .nfse_ginfes import send_api
             response = send_api(certificate, password, doc_values)
         else:
@@ -867,45 +870,119 @@ class EletronicDocument(models.Model):
             self.write(vals)
 
         elif response['code'] == 'processing':
-            self.write({
+            if self._uses_ginfes(cod_municipio):
+                self.write({
+                    'state': 'processing',
+                    'protocolo_nfe': response['entity']['protocolo_nfe'],
+                    'numero': response['entity']['numero_nfe'],
+                    'codigo_retorno': 2,
+                    'mensagem_retorno': 'Não Processado',
+                    'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
+                    'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
+                    'nfe_processada':  base64.encodestring(response['xml']),
+                })
+            else:
+                self.write({
                 'state': 'processing',
-            })
+                })
         else:
             raise UserError('%s - %s' %
                             (response['api_code'], response['message']))
 
     def action_check_status_nfse(self):
         for edoc in self:
-            response = check_nfse_api(
-                edoc.company_id.l10n_br_nfse_token_acess, 
-                edoc.company_id.l10n_br_tipo_ambiente,
-                str(edoc.id),
-            )
-            if response['code'] in (200, 201):
-                vals = {
-                    'protocolo_nfe': response['entity']['protocolo_nfe'],
-                    'numero': response['entity']['numero_nfe'],
-                    'state': 'done',
-                    'codigo_retorno': '100',
-                    'mensagem_retorno': 'Nota emitida com sucesso!',
-                    'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
-                    'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
+            company = edoc.company_id.with_context({'bin_size': False})
+            codigo_municipio= '%s%s' % (
+                    company.state_id.l10n_br_ibge_code,
+                    company.city_id.l10n_br_ibge_code)
+
+            if self._uses_ginfes(codigo_municipio):
+                _logger.debug('action_check_status_nfse')
+                from .nfse_ginfes import check_nfse_api as check_nfse
+                certificate = company.l10n_br_certificate
+                password = company.l10n_br_cert_password
+                cnpj_prestador = re.sub('[^0-9]', '', company.l10n_br_cnpj_cpf or '')
+                inscricao_municipal = re.sub('[^0-9]', '', company.l10n_br_inscr_mun)
+                
+                # consultar_situacao_lote
+                doc_values = {
+                    'cnpj_prestador': cnpj_prestador,
+                    'inscricao_municipal': inscricao_municipal,
+                    'protocolo': edoc.protocolo_nfe,
+                    'ambiente': edoc.ambiente,
                 }
-                if response.get('xml', False):
-                    vals['nfe_processada'] = base64.encodestring(response['xml'])
-                if response.get('pdf', False):
-                    vals['nfse_pdf'] = base64.encodestring(response['pdf'])
-                if response.get('url_nfe', False):
-                    vals['nfse_url'] = response['url_nfe']
-                edoc.write(vals)
 
-            elif response['code'] == 400:
-                edoc.write({
-                    'state': 'error',
-                    'codigo_retorno': response['api_code'],
-                    'mensagem_retorno': response['message'],
-                })
+                response = check_nfse(
+                    certificate,
+                    password,
+                    doc_values
+                )
 
+                if response['code'] in (200, 201):
+                    _logger.debug('200!!!!!')
+
+                    # vals = {
+                    #     'protocolo_nfe': response['entity']['protocolo_nfe'],
+                    #     'numero': response['entity']['numero_nfe'],
+                    #     'state': 'done',
+                    #     'codigo_retorno': '100',
+                    #     'mensagem_retorno': 'Nota emitida com sucesso!',
+                    #     'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
+                    #     'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
+                    # }
+                    # if response.get('xml', False):
+                    #     vals['nfe_processada'] = base64.encodestring(response['xml'])
+                    # if response.get('pdf', False):
+                    #     vals['nfse_pdf'] = base64.encodestring(response['pdf'])
+                    # if response.get('url_nfe', False):
+                    #     vals['nfse_url'] = response['url_nfe']
+                    # edoc.write(vals)
+
+                else:
+                    if response['final']:
+                        edoc.write({
+                            'state': 'error',
+                            'codigo_retorno': response['api_code'],
+                            'mensagem_retorno': response['message'],
+                        })
+                    else:
+                        edoc.write({
+                            'codigo_retorno': response['api_code'],
+                            'mensagem_retorno': response['message'],
+                        })
+
+
+            else:
+                check_nfse_api(
+                    edoc.company_id.l10n_br_nfse_token_acess, 
+                    edoc.company_id.l10n_br_tipo_ambiente,
+                    str(edoc.id),
+                )
+
+                if response['code'] in (200, 201):
+                    vals = {
+                        'protocolo_nfe': response['entity']['protocolo_nfe'],
+                        'numero': response['entity']['numero_nfe'],
+                        'state': 'done',
+                        'codigo_retorno': '100',
+                        'mensagem_retorno': 'Nota emitida com sucesso!',
+                        'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
+                        'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
+                    }
+                    if response.get('xml', False):
+                        vals['nfe_processada'] = base64.encodestring(response['xml'])
+                    if response.get('pdf', False):
+                        vals['nfse_pdf'] = base64.encodestring(response['pdf'])
+                    if response.get('url_nfe', False):
+                        vals['nfse_url'] = response['url_nfe']
+                    edoc.write(vals)
+
+                elif response['code'] == 400:
+                    edoc.write({
+                        'state': 'error',
+                        'codigo_retorno': response['api_code'],
+                        'mensagem_retorno': response['message'],
+                    })
 
     def cron_check_status_nfse(self):
         documents = self.search([('state', '=', 'processing')], limit=100)
@@ -943,7 +1020,7 @@ class EletronicDocument(models.Model):
             doc_values['inscricao_municipal'] = re.sub('\W+','', company.l10n_br_inscr_mun)
             doc_values['numero'] = str(self.data_emissao.year) + '{:>011d}'.format(self.numero)
             response = cancel_api(certificate, password, doc_values)
-        elif doc_values['codigo_municipio'] in CIDADES_GINFES:
+        elif self._uses_ginfes(doc_values['codigo_municipio']):
             from .nfse_ginfes import cancel_api
             response = cancel_api(certificate, password, doc_values)
 
