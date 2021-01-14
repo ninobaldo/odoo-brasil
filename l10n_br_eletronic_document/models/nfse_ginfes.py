@@ -30,7 +30,7 @@ def _convert_values(vals):
         # TODO: pegar de algum lugar
         # Código de Tributação no Município
         rps['codigo_tributacao_municipio'] = rps['itens_servico'][0]['codigo_servico_municipio']
-        rps['valor_iss_retido'] = rps['iss_valor_retencao']
+        rps['valor_iss_retido'] =  abs(rps['iss_valor_retencao'])
         rps['valor_deducao'] = 0
         rps['valor_pis'] = 0
         rps['valor_cofins'] = 0
@@ -41,8 +41,8 @@ def _convert_values(vals):
         rps['desconto_incondicionado'] = 0
         rps['desconto_condicionado'] = 0
 
-        rps['aliquota_issqn'] = rps['itens_servico'][0]['aliquota']
-        rps['valor_iss'] =  rps['aliquota_issqn'] * rps['valor_servico']
+        rps['aliquota_issqn'] = abs(rps['itens_servico'][0]['aliquota'])
+        rps['valor_iss'] =  abs(rps['aliquota_issqn'] * rps['valor_servico'])
         rps['valor_liquido_nfse'] = rps['valor_servico'] \
             - rps['valor_pis'] \
             - rps['valor_cofins'] \
