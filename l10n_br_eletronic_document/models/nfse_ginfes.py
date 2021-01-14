@@ -77,6 +77,7 @@ def _convert_values(vals):
 
         rps['valor_servico'] = "%.2f" % rps['valor_servico']
         rps['valor_iss_retido'] = "%.2f" % rps['valor_iss_retido']
+        rps['valor_iss'] = "%.2f" % rps['valor_iss']
 
 
         # TODO: pegar da configuração, pois estão todos fixos
