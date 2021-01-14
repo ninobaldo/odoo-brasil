@@ -470,7 +470,7 @@ class AccountMoveLine(models.Model):
             'irpj_valor': round(self.price_total *  irpj.tax_line_id.amount / 100, 2),
             # 'irrf_base_calculo': self.irrf_base_calculo,
             # 'irrf_aliquota': abs(self.irrf_aliquota),
-            'irrf_valor_retencao': abs(self.irrf_valor) if self.irrf_valor < 0 else 0,
+            # 'irrf_valor_retencao': abs(self.irrf_valor) if self.irrf_valor < 0 else 0,
             'inss_base_calculo': self.price_subtotal or 0,
             'inss_aliquota': abs(inss.tax_line_id.amount or 0),
             'inss_valor_retencao': abs(
