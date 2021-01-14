@@ -390,6 +390,7 @@ class AccountMoveLine(models.Model):
         ipi = self.move_id.line_ids.filtered(lambda x: x.tax_line_id.domain == 'ipi')
 
         fiscal_pos = self.move_id.fiscal_position_id
+        iss_valor = round(self.price_subtotal * iss.tax_line_id.amount / 100, 2)
 
         vals = {
             'name': self.name,
@@ -456,8 +457,8 @@ class AccountMoveLine(models.Model):
             'codigo_servico_municipio': self.product_id.service_code,
             'iss_aliquota': iss.tax_line_id.amount or 0,
             'iss_base_calculo': self.price_subtotal or 0,
-            'iss_valor': round(self.price_subtotal * iss.tax_line_id.amount / 100, 2),
-            'iss_valor_retencao': abs(self.iss_valor) if self.iss_valor < 0 else 0,
+            'iss_valor': iss_valor,
+            'iss_valor_retencao': abs(iss_valor) if iss_valor < 0 else 0,
 
             # - RETENÇÔES -
             'csll_aliquota': csll.tax_line_id.amount or 0,
