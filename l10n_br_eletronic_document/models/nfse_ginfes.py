@@ -76,6 +76,7 @@ def _convert_values(vals):
         rps['tomador']['telefone'] = ''
 
         rps['valor_servico'] = "%.2f" % rps['valor_servico']
+        rps['valor_iss_retido'] = "%.2f" % rps['valor_iss_retido']
 
 
         # TODO: pegar da configuração, pois estão todos fixos

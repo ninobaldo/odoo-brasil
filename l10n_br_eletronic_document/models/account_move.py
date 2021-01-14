@@ -457,8 +457,8 @@ class AccountMoveLine(models.Model):
             'iss_aliquota': iss.tax_line_id.amount or 0,
             'iss_base_calculo': self.price_subtotal or 0,
             'iss_valor': round(self.price_subtotal * iss.tax_line_id.amount / 100, 2),
-            # 'iss_valor_retencao':
-            # abs(self.iss_valor) if self.iss_valor < 0 else 0,
+            'iss_valor_retencao': abs(self.iss_valor) if self.iss_valor < 0 else 0,
+
             # - RETENÇÔES -
             'csll_aliquota': csll.tax_line_id.amount or 0,
             'csll_base_calculo': self.price_total or 0,
@@ -469,8 +469,7 @@ class AccountMoveLine(models.Model):
             'irpj_valor': round(self.price_total *  irpj.tax_line_id.amount / 100, 2),
             # 'irrf_base_calculo': self.irrf_base_calculo,
             # 'irrf_aliquota': abs(self.irrf_aliquota),
-            # 'irrf_valor_retencao':
-            # abs(self.irrf_valor) if self.irrf_valor < 0 else 0,
+            'irrf_valor_retencao': abs(self.irrf_valor) if self.irrf_valor < 0 else 0,
             'inss_base_calculo': self.price_subtotal or 0,
             'inss_aliquota': abs(inss.tax_line_id.amount or 0),
             'inss_valor_retencao': abs(
