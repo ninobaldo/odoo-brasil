@@ -207,32 +207,19 @@ def cancel_api(certificate, password, vals):
 
     _logger.error('resultado')
     _logger.error(resposta)
-
-    if hasattr(retorno, 'ListaMensagemRetorno'):
+    _logger.error(retorno.ListaMensagemRetorno.MensagemRetorno.Codigo != 'E79')
+    _logger.error(retorno.ListaMensagemRetorno.MensagemRetorno.Codigo == 'E79')
+    if hasattr(retorno, 'ListaMensagemRetorno') and retorno.ListaMensagemRetorno.MensagemRetorno.Codigo != 'E79':
         return {
             'code': 400,
             'api_code': retorno.ListaMensagemRetorno.MensagemRetorno.Codigo,
             'message': retorno.ListaMensagemRetorno.MensagemRetorno.Mensagem + ' ' + retorno.ListaMensagemRetorno.MensagemRetorno.Correcao,
         }
     else:
-        if vals['ambiente'] == 'producao':
-            return {
-                'code': 201,
-                'entity': {
-                    'numero_nfe': retorno.NumeroLote,
-                    'protocolo_nfe': retorno.Protocolo,
-                },
-                'xml': resposta['sent_xml'].encode('utf-8'),
-            }
-        else:
-            return {
-                'code': 201,
-                'entity': {
-                    'protocolo_nfe':  "homologacao: {}".format(retorno.Protocolo),
-                    'numero_nfe': retorno.NumeroLote,
-                },
-                'xml': resposta['sent_xml'].encode('utf-8'),
-            }
+        return {
+            'code': 200,
+            'message': 'Nota Fiscal Cancelada',
+        }
 
 def check_nfse_api(certificate, password, edocs):
     _logger.info('check_nfse_api')
