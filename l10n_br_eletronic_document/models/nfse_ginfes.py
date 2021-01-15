@@ -207,8 +207,7 @@ def cancel_api(certificate, password, vals):
 
     _logger.error('resultado')
     _logger.error(resposta)
-    _logger.error(retorno.ListaMensagemRetorno.MensagemRetorno.Codigo != 'E79')
-    _logger.error(retorno.ListaMensagemRetorno.MensagemRetorno.Codigo == 'E79')
+    
     if hasattr(retorno, 'ListaMensagemRetorno') and retorno.ListaMensagemRetorno.MensagemRetorno.Codigo != 'E79':
         return {
             'code': 400,
