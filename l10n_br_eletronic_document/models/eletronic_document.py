@@ -897,8 +897,7 @@ class EletronicDocument(models.Model):
                     company.city_id.l10n_br_ibge_code)
 
             if self._uses_ginfes(codigo_municipio):
-                _logger.debug('action_check_status_nfse')
-                from .nfse_ginfes import check_nfse_api as check_nfse
+                from .nfse_ginfes import check_nfse_api as check_nfse_ginfes
                 certificate = company.l10n_br_certificate
                 password = company.l10n_br_cert_password
                 cnpj_prestador = re.sub('[^0-9]', '', company.l10n_br_cnpj_cpf or '')
@@ -910,74 +909,52 @@ class EletronicDocument(models.Model):
                     'inscricao_municipal': inscricao_municipal,
                     'protocolo': edoc.protocolo_nfe,
                     'ambiente': edoc.ambiente,
+
+                    'numero': edoc.numero,
+
+                    'serie': edoc.serie_documento,
+                    'tipo': 1,
+
                 }
 
-                response = check_nfse(
+                response = check_nfse_ginfes(
                     certificate,
                     password,
                     doc_values
                 )
-
-                if response['code'] in (200, 201):
-                    _logger.debug('200!!!!!')
-
-                    # vals = {
-                    #     'protocolo_nfe': response['entity']['protocolo_nfe'],
-                    #     'numero': response['entity']['numero_nfe'],
-                    #     'state': 'done',
-                    #     'codigo_retorno': '100',
-                    #     'mensagem_retorno': 'Nota emitida com sucesso!',
-                    #     'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
-                    #     'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
-                    # }
-                    # if response.get('xml', False):
-                    #     vals['nfe_processada'] = base64.encodestring(response['xml'])
-                    # if response.get('pdf', False):
-                    #     vals['nfse_pdf'] = base64.encodestring(response['pdf'])
-                    # if response.get('url_nfe', False):
-                    #     vals['nfse_url'] = response['url_nfe']
-                    # edoc.write(vals)
-
-                else:
-                    if response['final']:
-                        edoc.write({
-                            'state': 'error',
-                            'codigo_retorno': response['api_code'],
-                            'mensagem_retorno': response['message'],
-                        })
-                    else:
-                        edoc.write({
-                            'codigo_retorno': response['api_code'],
-                            'mensagem_retorno': response['message'],
-                        })
-
-
             else:
-                check_nfse_api(
+                response = check_nfse_api(
                     edoc.company_id.l10n_br_nfse_token_acess, 
                     edoc.company_id.l10n_br_tipo_ambiente,
                     str(edoc.id),
                 )
 
-                if response['code'] in (200, 201):
-                    vals = {
-                        'protocolo_nfe': response['entity']['protocolo_nfe'],
-                        'numero': response['entity']['numero_nfe'],
-                        'state': 'done',
-                        'codigo_retorno': '100',
-                        'mensagem_retorno': 'Nota emitida com sucesso!',
-                        'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
-                        'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
-                    }
-                    if response.get('xml', False):
-                        vals['nfe_processada'] = base64.encodestring(response['xml'])
-                    if response.get('pdf', False):
-                        vals['nfse_pdf'] = base64.encodestring(response['pdf'])
-                    if response.get('url_nfe', False):
-                        vals['nfse_url'] = response['url_nfe']
-                    edoc.write(vals)
+            if response['code'] in (200, 201):
+                vals = {
+                    'protocolo_nfe': response['entity']['protocolo_nfe'],
+                    'numero': response['entity']['numero_nfe'],
+                    'state': 'done',
+                    'codigo_retorno': '100',
+                    'mensagem_retorno': 'Nota emitida com sucesso!',
+                    'nfe_processada_name':  "NFe%08d.xml" % response['entity']['numero_nfe'],
+                    'nfse_pdf_name':  "NFe%08d.pdf" % response['entity']['numero_nfe'],
+                }
+                if response.get('xml', False):
+                    vals['nfe_processada'] = base64.encodestring(response['xml'])
+                if response.get('pdf', False):
+                    vals['nfse_pdf'] = base64.encodestring(response['pdf'])
+                if response.get('url_nfe', False):
+                    vals['nfse_url'] = response['url_nfe']
 
-                elif response['code'] == 400:
+                edoc.write(vals)
+
+            elif response['code'] == 400:
+                if response['processing']:
+                    edoc.write({
+                        'codigo_retorno': response['api_code'],
+                        'mensagem_retorno': response['message'],
+                    })
+                else:
                     edoc.write({
                         'state': 'error',
                         'codigo_retorno': response['api_code'],

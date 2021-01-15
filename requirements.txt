@@ -1,4 +1,4 @@
 signxml
 # pytrustnfe3
-https://github.com/ninobaldo/PyTrustNFe/archive/495fee9b84dcc0289ff2b0175ea81ac962c93c84.tar.gz
+https://github.com/ninobaldo/PyTrustNFe/archive/e80e904f3251b201e0394b64b18026dd00cdd2fe.tar.gz
 pysigep

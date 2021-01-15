@@ -1,6 +1,6 @@
 import re
 import base64
-from pytrustnfe.nfse.ginfes import recepcionar_lote_rps, consultar_situacao_lote,  cancelar_nfse, consultar_lote_rps
+from pytrustnfe.nfse.ginfes import recepcionar_lote_rps, consultar_situacao_lote,  cancelar_nfse, consultar_lote_rps, consultar_nfse_por_rps, consultar_nfse
 from pytrustnfe.certificado import Certificado
 
 import logging
@@ -21,7 +21,7 @@ def _convert_values(vals):
     result['inscricao_municipal'] = vals[0]['emissor']['inscricao_municipal']
 
     for rps in vals:
-        rps['data_emissao'] = datetime.datetime.now().replace(microsecond=0).isoformat()
+        rps['data_emissao'] = datetime.datetime.now().replace(microsecond=0, second=0, minute=0, hour=0).isoformat()
         rps['numero'] = rps['numero_rps']
         rps['optante_simples'] = 1 if rps['regime_tributario'] == "simples" else 2
         # TODO: Talvez SBC retenha quando a nota vai para SBC (confirmar com contador)
@@ -243,7 +243,6 @@ def check_nfse_api(certificate, password, edocs):
 
     return _consultar_situacao_lote(certificado, consulta=edocs, ambiente=edocs['ambiente'])
     
-
 def _consultar_situacao_lote(certificado, **kwargs):
     _logger.info('_consultar_situacao_lote')
     resposta = consultar_situacao_lote(certificado, **kwargs)
@@ -255,7 +254,7 @@ def _consultar_situacao_lote(certificado, **kwargs):
     if hasattr(retorno, 'ListaMensagemRetorno'):
         return {
             'code': 400,
-            'final': False,
+            'processing': True,
             'api_code': retorno.ListaMensagemRetorno.MensagemRetorno.Codigo,
             'message': retorno.ListaMensagemRetorno.MensagemRetorno.Mensagem + ' ' + retorno.ListaMensagemRetorno.MensagemRetorno.Correcao,
         }
@@ -268,26 +267,72 @@ def _consultar_situacao_lote(certificado, **kwargs):
         if retorno.Situacao == 1:
             return {
                 'code': 400,
-                'final': False,
+                'processing': True,
                 'api_code': retorno.Situacao,
                 'message': 'Não Recebido',
             }
         elif retorno.Situacao == 2:
             return {
                 'code': 400,
-                'final': False,
+                'processing': True,
                 'api_code': retorno.Situacao,
                 'message': 'Não Processado',
             }
-        else:
+        elif retorno.Situacao == 3:
             return _consultar_lote_rps(certificado, **kwargs)
-            # return {
-            #     'code': 400,
-            #     'final': False,
-            #     'api_code': '666',
-            #     'message': 'Erro não identificado',
-            #     'final': False
-            # }
+        else:
+            return _consultar_nfse_por_rps(certificado, **kwargs)
+
+def _consultar_nfse_por_rps(certificado, **kwargs):
+    _logger.info('_consultar_nfse_por_rps')
+    resposta = consultar_nfse_por_rps(certificado, **kwargs)
+    retorno = resposta['object']
+
+    _logger.info('_consultar_nfse_por_rps.resultado')
+    _logger.info(resposta)
+
+    if hasattr(retorno, 'MensagemRetorno'):
+        return {
+            'code': 400,
+            'processing': True,
+            'api_code': retorno.MensagemRetorno.Codigo,
+            'message': retorno.MensagemRetorno.Mensagem + ' ' + retorno.MensagemRetorno.Correcao,
+        }
+    else:
+        kwargs['consulta']['numero_nfse'] = retorno.CompNfse.Nfse.InfNfse.Numero
+        return _consultar_nfse(certificado, **kwargs)
+
+
+def _consultar_nfse(certificado, **kwargs):
+    _logger.info('_consultar_nfse')
+    _logger.info(kwargs)
+    resposta = consultar_nfse(certificado, **kwargs)
+    retorno = resposta['object']
+
+    _logger.info('_consultar_nfse.resultado')
+    _logger.info(resposta)
+
+    if hasattr(retorno, 'MensagemRetorno'):
+        return {
+            'code': 400,
+            'processing': True,
+            'api_code': retorno.MensagemRetorno.Codigo,
+            'message': retorno.MensagemRetorno.Mensagem + ' ' + retorno.MensagemRetorno.Correcao,
+        }
+    else:
+        codigo_verificacao = retorno.ListaNfse.CompNfse.Nfse.InfNfse.CodigoVerificacao
+        numero_nfe = retorno.ListaNfse.CompNfse.Nfse.InfNfse.Numero
+        return {
+            'code': 200,
+            'entity': {
+                'protocolo_nfe': codigo_verificacao,
+                'numero_nfe': numero_nfe,
+                'data_emissao': retorno.ListaNfse.CompNfse.Nfse.InfNfse.DataEmissao,
+            },
+            'xml': recebe_lote['received_xml'].encode('utf-8'),
+            # So para SBC por enquanto
+            'url_nfe': 'http://nfse.isssbc.com.br/report/consultarNota?__report=nfs_sao_bernardo_campo_novo&cdVerificacao=%s&numNota=%s&cnpjPrestador=null' % (codigo_verificacao, numero_nfe),
+        }
 
 
 def _consultar_lote_rps(certificado, **kwargs):
@@ -301,14 +346,15 @@ def _consultar_lote_rps(certificado, **kwargs):
     if hasattr(retorno, 'ListaMensagemRetorno'):
         return {
             'code': 400,
-            'final': True,
+            'processing': False,
             'api_code': retorno.ListaMensagemRetorno.MensagemRetorno.Codigo,
             'message': retorno.ListaMensagemRetorno.MensagemRetorno.Mensagem + ' ' + retorno.ListaMensagemRetorno.MensagemRetorno.Correcao,
         }
     else:
+        # Não deveria entrar aqui, pois só chama essa consulta em caso de erro
         return {
             'code': 400,
-            'final': False,
+            'processing': False,
             'api_code': '666',
             'message': 'Erro não identificado',
         }
