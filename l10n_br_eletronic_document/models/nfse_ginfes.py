@@ -329,7 +329,7 @@ def _consultar_nfse(certificado, **kwargs):
                 'numero_nfe': numero_nfe,
                 'data_emissao': retorno.ListaNfse.CompNfse.Nfse.InfNfse.DataEmissao,
             },
-            'xml': recebe_lote['received_xml'].encode('utf-8'),
+            'xml': resposta['received_xml'].encode('utf-8'),
             # So para SBC por enquanto
             'url_nfe': 'http://nfse.isssbc.com.br/report/consultarNota?__report=nfs_sao_bernardo_campo_novo&cdVerificacao=%s&numNota=%s&cnpjPrestador=null' % (codigo_verificacao, numero_nfe),
         }
