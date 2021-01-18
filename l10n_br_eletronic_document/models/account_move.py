@@ -287,7 +287,7 @@ class AccountMove(models.Model):
         bruto_produtos = bruto_servicos = 0.0
         for inv_line in invoice_lines:
             if inv_line.product_id.type == 'service':
-                total_servicos += inv_line.price_subtotal
+                total_servicos += inv_line.price_total
                 bruto_servicos += round(inv_line.quantity * inv_line.price_unit, 2)
             else:
                 total_produtos += inv_line.price_subtotal
@@ -390,7 +390,7 @@ class AccountMoveLine(models.Model):
         ipi = self.move_id.line_ids.filtered(lambda x: x.tax_line_id.domain == 'ipi')
 
         fiscal_pos = self.move_id.fiscal_position_id
-        iss_valor = round(self.price_subtotal * iss.tax_line_id.amount / 100, 2)
+        iss_valor = round(self.price_total * iss.tax_line_id.amount / 100, 2)
 
         vals = {
             'name': self.name,
@@ -456,7 +456,7 @@ class AccountMoveLine(models.Model):
             'item_lista_servico': self.product_id.service_type_id.code,
             'codigo_servico_municipio': self.product_id.service_code,
             'iss_aliquota': iss.tax_line_id.amount or 0,
-            'iss_base_calculo': self.price_subtotal or 0,
+            'iss_base_calculo': self.price_total or 0,
             'iss_valor': iss_valor,
             'iss_valor_retencao': abs(iss_valor) if iss_valor < 0 else 0,
 
