@@ -25,12 +25,12 @@ def _convert_values(vals):
         rps['numero'] = rps['numero_rps']
         rps['optante_simples'] = 1 if rps['regime_tributario'] == "simples" else 2
         # TODO: Talvez SBC retenha quando a nota vai para SBC (confirmar com contador)
+        rps['valor_iss_retido'] =  abs(rps['iss_valor_retencao']) if rps['iss_retido'] else 0
         rps['iss_retido'] = 1 if rps['iss_retido'] else 2
 
         # TODO: pegar de algum lugar
         # Código de Tributação no Município
         rps['codigo_tributacao_municipio'] = rps['itens_servico'][0]['codigo_servico_municipio']
-        rps['valor_iss_retido'] =  abs(rps['iss_valor_retencao'])
         rps['valor_deducao'] = 0
         rps['valor_pis'] = 0
         rps['valor_cofins'] = 0
@@ -76,7 +76,7 @@ def _convert_values(vals):
         rps['tomador']['telefone'] = ''
 
         rps['valor_servico'] = "%.2f" % rps['valor_servico']
-        rps['valor_iss_retido'] = "%.2f" % rps['valor_iss_retido']
+        rps['valor_iss_retido'] = "%.2f" % rps['valor_iss_retido'] if rps['valor_iss_retido'] > 0 else ''
         rps['valor_iss'] = "%.2f" % rps['valor_iss']
 
 
