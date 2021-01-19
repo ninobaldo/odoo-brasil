@@ -25,7 +25,6 @@ def _convert_values(vals):
         rps['numero'] = rps['numero_rps']
         rps['optante_simples'] = 1 if rps['regime_tributario'] == "simples" else 2
         
-        rps['iss_retido'] = 1 if rps['iss_retido'] else 2
 
         # TODO: pegar de algum lugar
         # Código de Tributação no Município
@@ -87,6 +86,7 @@ def _convert_values(vals):
         rps['valor_servico'] = "%.2f" % rps['valor_servico']
         rps['valor_iss_retido'] = "%.2f" % rps['valor_iss_retido'] if rps['valor_iss_retido'] > 0 else ''
         rps['valor_iss'] = "%.2f" % rps['valor_iss']
+        rps['iss_retido'] = 1 if rps['iss_retido'] else 2
 
 
         # TODO: pegar da configuração, pois estão todos fixos
