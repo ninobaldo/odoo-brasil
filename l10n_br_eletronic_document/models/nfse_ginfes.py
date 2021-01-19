@@ -43,6 +43,7 @@ def _convert_values(vals):
         rps['aliquota_issqn'] = abs(rps['itens_servico'][0]['aliquota'])
     
         if  rps['iss_retido']:
+            rps['valor_servico'] = rps['valor_bruto']
             rps['valor_iss'] =  abs(rps['aliquota_issqn'] * rps['valor_bruto'])
             # TODO: Talvez SBC retenha quando a nota vai para SBC (confirmar com contador)
             rps['valor_iss_retido'] =  rps['valor_iss']
