@@ -49,7 +49,7 @@ def _convert_values(vals):
             rps['valor_iss_retido'] =  rps['valor_iss']
         else:
             rps['valor_iss'] =  abs(rps['aliquota_issqn'] * rps['valor_servico'])
-            rps['valor_iss_retido'] =  abs(rps['iss_valor_retencao']) if rps['iss_retido'] else 0
+            rps['valor_iss_retido'] = 0
 
 
         rps['valor_liquido_nfse'] = rps['valor_servico'] \
