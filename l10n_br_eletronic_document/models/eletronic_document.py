@@ -792,6 +792,7 @@ class EletronicDocument(models.Model):
                 'base_calculo': round(doc.iss_base_calculo, 2),
                 'valor_iss': round(doc.iss_valor, 2),
                 'valor_total': round(doc.valor_final, 2),
+                'valor_bruto': round(doc.valor_bruto, 2),
                 'iss_valor_retencao': round(doc.iss_valor_retencao, 2),
                 'inss_valor_retencao': round(doc.inss_valor_retencao, 2),
                 'valor_carga_tributaria': round(doc.valor_estimado_tributos, 2) or '',

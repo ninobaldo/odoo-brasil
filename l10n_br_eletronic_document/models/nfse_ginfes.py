@@ -24,8 +24,7 @@ def _convert_values(vals):
         rps['data_emissao'] = datetime.datetime.now().replace(microsecond=0, second=0, minute=0, hour=0).isoformat()
         rps['numero'] = rps['numero_rps']
         rps['optante_simples'] = 1 if rps['regime_tributario'] == "simples" else 2
-        # TODO: Talvez SBC retenha quando a nota vai para SBC (confirmar com contador)
-        rps['valor_iss_retido'] =  abs(rps['iss_valor_retencao']) if rps['iss_retido'] else 0
+        
         rps['iss_retido'] = 1 if rps['iss_retido'] else 2
 
         # TODO: pegar de algum lugar
@@ -42,7 +41,16 @@ def _convert_values(vals):
         rps['desconto_condicionado'] = 0
 
         rps['aliquota_issqn'] = abs(rps['itens_servico'][0]['aliquota'])
-        rps['valor_iss'] =  abs(rps['aliquota_issqn'] * rps['valor_servico'])
+    
+        if  rps['iss_retido']:
+            rps['valor_iss'] =  abs(rps['aliquota_issqn'] * rps['valor_bruto'])
+            # TODO: Talvez SBC retenha quando a nota vai para SBC (confirmar com contador)
+            rps['valor_iss_retido'] =  rps['valor_iss']
+        else:
+            rps['valor_iss'] =  abs(rps['aliquota_issqn'] * rps['valor_servico'])
+            rps['valor_iss_retido'] =  abs(rps['iss_valor_retencao']) if rps['iss_retido'] else 0
+
+
         rps['valor_liquido_nfse'] = rps['valor_servico'] \
             - rps['valor_pis'] \
             - rps['valor_cofins'] \
