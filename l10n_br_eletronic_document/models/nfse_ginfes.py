@@ -68,7 +68,7 @@ def _convert_values(vals):
         if rps['itens_servico'][0]['cnae_servico']:
             rps['cnae_servico'] = rps['itens_servico'][0]['cnae_servico']
 
-        rps['descricao'] = rps['discriminacao']
+        rps['descricao'] = rps['observacoes'] || rps['discriminacao'].replace('|', '\n')
         
         # Codigo do municipio do IBGE
         rps['codigo_municipio'] = rps['emissor']['codigo_municipio']
