@@ -80,7 +80,7 @@ def _convert_values(vals):
 
         rps['tomador']['logradouro'] = rps['tomador']['endereco']['logradouro']
         rps['tomador']['numero'] = rps['tomador']['endereco']['numero']
-        rps['tomador']['complemento'] = rps['tomador']['endereco']['complemento']
+        rps['tomador']['complemento'] = rps['tomador']['endereco']['complemento'] if rps['tomador']['endereco']['complemento'] else ""
         rps['tomador']['bairro'] = rps['tomador']['endereco']['bairro']
         rps['tomador']['cidade'] = rps['tomador']['endereco']['codigo_municipio']
         rps['tomador']['uf'] = rps['tomador']['endereco']['uf']
